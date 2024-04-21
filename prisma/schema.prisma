@@ -1,0 +1,284 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Account {
+  id                       String  @id
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  refresh_token_expires_in Int?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  oauth_token_secret       String?
+  oauth_token              String?
+  User                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model ApiKey {
+  id        String   @id
+  ownerId   String
+  name      String
+  createdAt DateTime @default(now())
+  active    Boolean  @default(true)
+  updatedAt DateTime @default(now())
+  Site      Site     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+}
+
+model BrandSubscription {
+  id            String          @id
+  brandId       String
+  subscriberId  String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  Site          Site            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  Subscriber    Subscriber      @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  Event         Event[]
+  MessageAction MessageAction[]
+
+  @@unique([brandId, subscriberId])
+  @@index([brandId])
+  @@index([subscriberId])
+}
+
+model Event {
+  id                  String             @id
+  name                String
+  timestamp           DateTime           @default(now())
+  distinctActorId     String
+  channelType         String
+  properties          Json
+  siteId              String?
+  subscriberId        String?
+  brandSubscriptionId String?
+  BrandSubscription   BrandSubscription? @relation(fields: [brandSubscriptionId], references: [id])
+  Site                Site?              @relation(fields: [siteId], references: [id])
+  Subscriber          Subscriber?        @relation(fields: [subscriberId], references: [id])
+
+  @@index([channelType], map: "idx_event_channelType")
+  @@index([distinctActorId], map: "idx_event_distinctActorId")
+  @@index([name], map: "idx_event_name")
+  @@index([siteId], map: "idx_event_siteId")
+  @@index([subscriberId], map: "idx_event_subscriberId")
+}
+
+model Message {
+  id              String            @id
+  title           String?
+  siteId          String
+  content         String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime
+  sendAt          DateTime?
+  recipients      Int?
+  Site            Site              @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  MessageAction   MessageAction[]
+  MessageTemplate MessageTemplate[]
+
+  @@index([siteId])
+}
+
+model MessageAction {
+  id                String               @id
+  siteId            String
+  messageId         String
+  templateId        String?
+  recipientPhone    String
+  recipientId       String?
+  subscriptionId    String?
+  channelType       SubscriptionChannel?
+  sendAt            DateTime             @default(now())
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime
+  jobStatus         Status?              @default(new)
+  messageStatus     MessageStatus?       @default(queued)
+  senderPhone       String?
+  Message           Message              @relation(fields: [messageId], references: [id])
+  BrandSubscription BrandSubscription?   @relation(fields: [subscriptionId], references: [id])
+}
+
+model MessageTemplate {
+  id                String              @id
+  messageId         String
+  channelType       SubscriptionChannel
+  content           Json
+  status            String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  channelTemplateId String?
+  name              String?
+  Message           Message             @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
+
+model Post {
+  id            String   @id
+  title         String?
+  description   String?
+  content       String?
+  slug          String
+  image         String?  @default("https://public.blob.vercel-storage.com/eEZHAoPTOBSYGBE3/hxfcV5V-eInX3jbVUhjAt1suB7zB88uGd1j20b.png")
+  imageBlurhash String?  @default("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAhCAYAAACbffiEAAAACXBIWXMAABYlAAAWJQFJUiTwAAABfUlEQVR4nN3XyZLDIAwE0Pz/v3q3r55JDlSBplsIEI49h76k4opexCK/juP4eXjOT149f2Tf9ySPgcjCc7kdpBTgDPKByKK2bTPFEdMO0RDrusJ0wLRBGCIuelmWJAjkgPGDSIQEMBDCfA2CEPM80+Qwl0JkNxBimiaYGOTUlXYI60YoehzHJDEm7kxjV3whOQTD3AaCuhGKHoYhyb+CBMwjIAFz647kTqyapdV4enGINuDJMSScPmijSwjCaHeLcT77C7EC0C1ugaCTi2HYfAZANgj6Z9A8xY5eiYghDMNQBJNCWhASot0jGsSCUiHWZcSGQjaWWCDaGMOWnsCcn2QhVkRuxqqNxMSdUSElCDbp1hbNOsa6Ugxh7xXauF4DyM1m5BLtCylBXgaxvPXVwEoOBjeIFVODtW74oj1yBQah3E8tyz3SkpolKS9Geo9YMD1QJR1Go4oJkgO1pgbNZq0AOUPChyjvh7vlXaQa+X1UXwKxgHokB2XPxbX+AnijwIU4ahazAAAAAElFTkSuQmCC")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  published     Boolean  @default(false)
+  siteId        String?
+  userId        String?
+  Site          Site?    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  User          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([slug, siteId])
+  @@index([siteId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Site {
+  id                String              @id
+  name              String?
+  description       String?
+  logo              String?             @default("https://public.blob.vercel-storage.com/eEZHAoPTOBSYGBE3/JRajRyC-PhBHEinQkupt02jqfKacBVHLWJq7Iy.png")
+  font              String              @default("font-cal")
+  image             String?             @default("https://public.blob.vercel-storage.com/eEZHAoPTOBSYGBE3/hxfcV5V-eInX3jbVUhjAt1suB7zB88uGd1j20b.png")
+  imageBlurhash     String?             @default("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAhCAYAAACbffiEAAAACXBIWXMAABYlAAAWJQFJUiTwAAABfUlEQVR4nN3XyZLDIAwE0Pz/v3q3r55JDlSBplsIEI49h76k4opexCK/juP4eXjOT149f2Tf9ySPgcjCc7kdpBTgDPKByKK2bTPFEdMO0RDrusJ0wLRBGCIuelmWJAjkgPGDSIQEMBDCfA2CEPM80+Qwl0JkNxBimiaYGOTUlXYI60YoehzHJDEm7kxjV3whOQTD3AaCuhGKHoYhyb+CBMwjIAFz647kTqyapdV4enGINuDJMSScPmijSwjCaHeLcT77C7EC0C1ugaCTi2HYfAZANgj6Z9A8xY5eiYghDMNQBJNCWhASot0jGsSCUiHWZcSGQjaWWCDaGMOWnsCcn2QhVkRuxqqNxMSdUSElCDbp1hbNOsa6Ugxh7xXauF4DyM1m5BLtCylBXgaxvPXVwEoOBjeIFVODtW74oj1yBQah3E8tyz3SkpolKS9Geo9YMD1QJR1Go4oJkgO1pgbNZq0AOUPChyjvh7vlXaQa+X1UXwKxgHokB2XPxbX+AnijwIU4ahazAAAAAElFTkSuQmCC")
+  subdomain         String?             @unique
+  customDomain      String?             @unique
+  message404        String?             @default("Blimey! You've found a page that doesn't exist.")
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  userId            String?
+  ApiKey            ApiKey[]
+  BrandSubscription BrandSubscription[]
+  Event             Event[]
+  Message           Message[]
+  Post              Post[]
+  User              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  SiteChannel       SiteChannel[]
+
+  @@index([userId])
+}
+
+model SiteChannel {
+  id             String   @id
+  channelType    String
+  provider       String
+  credentials    Json
+  siteId         String
+  accountDetails Json?
+  createdAt      DateTime @default(now())
+  providerId     String?
+  updatedAt      DateTime
+  phoneNumber    Json?
+  Site           Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, providerId])
+  @@index([siteId])
+}
+
+model Subscriber {
+  id                 String               @id
+  phoneNumber        String               @unique
+  defaultChannel     SubscriptionChannel  @default(sms)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  countryCode        String?
+  countryIso         String?
+  verificationStatus Status?              @default(pending)
+  BrandSubscription  BrandSubscription[]
+  Event              Event[]
+  SubscriberChannels SubscriberChannels[]
+}
+
+model SubscriberChannels {
+  id           String              @id
+  subscriberId String
+  channel      SubscriptionChannel
+  channelData  Json?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime
+  valid        Status?             @default(pending)
+  Subscriber   Subscriber          @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriberId, channel])
+  @@index([subscriberId])
+}
+
+model User {
+  id            String    @id
+  name          String?
+  username      String?
+  gh_username   String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  customer_id   String?
+  subscription  String?
+  Account       Account[]
+  Post          Post[]
+  Session       Session[]
+  Site          Site[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum MessageStatus {
+  queued
+  sending
+  sent
+  delivered
+  sending_failed
+  delivery_failed
+  delivery_unconfirmed
+  scheduled
+}
+
+enum Status {
+  started
+  inProgress
+  pending
+  valid
+  invalid
+  done
+  failed
+  new
+}
+
+enum SubscriptionChannel {
+  sms
+  whatsapp
+  telegram
+  imessage
+}
