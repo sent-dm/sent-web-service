@@ -1,6 +1,8 @@
+import 'dotenv/config';
+
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { client as redisClient, connectRedis } from './redis/redis-config';
+import { client as redisClient, connectRedis} from './redis/redis-config';
 import { SubscriptionChannel, RedisSubscriptionChannelStatus } from './types/types';
 
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || "";
@@ -10,6 +12,8 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+
 
 (async () => {
   await connectRedis();

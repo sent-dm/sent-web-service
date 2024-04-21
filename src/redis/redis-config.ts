@@ -1,9 +1,8 @@
 import { createClient } from "redis";
 
-const REDIS_URL = process.env.REDIS_URL || "placeholder_key";
 
 const client = createClient({
-  url: REDIS_URL,
+  url: process.env.REDIS_URL,
 });
 
 client.on("error", (err) => {
